@@ -2,9 +2,9 @@
   "type": "module",
   "scripts": {
     "build": "rimraf dist && tsc",
-    "start": "node --env-file=.env dist/index.js",
+    "start": "node dist/index.js",
     "lint": "oxlint",
-    "lint:fix": "ixlint --fix",
+    "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },
@@ -17,7 +17,9 @@
     "@discordjs/rest": "^2.6.3",
     "discord-api-types": "^0.38.53",
     "lexicons": "link:@bsky/sdk/lexicons",
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "yaml": "^2.9.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",

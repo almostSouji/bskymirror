@@ -8,29 +8,12 @@ import {
   ComponentType,
   MessageFlags,
 } from "discord-api-types/v10";
-
-export function verifyEnv(env: typeof process.env, requiredKeys: string[]) {
-  const mapping = requiredKeys.map((key) => ({
-    key,
-    value: env[key],
-  }));
-
-  const missing = mapping.filter((pair) => !pair.value);
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing environment variable(s) ${missing.map((pair) => pair.key).join(", ")}.`,
-    );
-  }
-
-  const [webhookId, webhookToken, handles, mentionRoleId] = mapping;
-
-  return {
-    discordWebhookId: webhookId.value!,
-    discordWebhookToken: webhookToken.value!,
-    bskyHandles: handles.value!.split(","),
-    mentionRoleId: mentionRoleId.value!,
-  };
-}
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { parse } from "yaml";
+import * as z from "zod";
+import { MirrorConfig } from "./config.js";
+import { logger } from "./logger.js";
 
 export type BskyRecordData = Awaited<ReturnType<typeof fetchAtProtoRecords>>;
 
@@ -119,7 +102,7 @@ export async function handleCommit(
     discordRest: REST;
     record: BskyRecordData;
     hookBase: string;
-    mentionRoleId: string;
+    mentionRoleId?: string;
   },
 ) {
   const url = `https://bsky.app/profile/${did}/post/${rkey}`;
@@ -197,4 +180,60 @@ export async function handleCommit(
       avatarUrl: profile.profile.avatar ?? undefined,
     },
   );
+}
+
+export async function loadMirrorConfig(path: string) {
+  const agent = new Agent({
+    service: "https://public.api.bsky.app",
+  });
+
+  const didResolver = new DidResolver({});
+  const handleResolver = new HandleResolver({});
+
+  const configYaml = await readFile(fileURLToPath(new URL(path, import.meta.url)));
+  const configObject = parse(configYaml.toString());
+  const config = MirrorConfig.parse(configObject);
+
+  type AtProtoRecord = Awaited<ReturnType<typeof fetchAtProtoRecords>>;
+
+  const profileCache = new Map<
+    string,
+    {
+      atproto: AtProtoRecord;
+      mirrorConfig: z.infer<typeof MirrorConfig>;
+    }
+  >();
+
+  const atProtoCache = new Map<string, AtProtoRecord>();
+
+  for (const entry of config) {
+    for (const handle of entry.bsky_handles) {
+      try {
+        let atProtoRecord = atProtoCache.get(handle);
+        if (!atProtoRecord) {
+          const atProtoData = await fetchAtProtoRecords(handle, {
+            handleResolver,
+            didResolver,
+            agent,
+          });
+
+          atProtoCache.set(handle, atProtoData);
+          atProtoRecord = atProtoData;
+        }
+
+        const current = profileCache.get(atProtoRecord.did)?.mirrorConfig ?? [];
+        current.push(entry);
+
+        profileCache.set(atProtoRecord.did, {
+          atproto: atProtoRecord,
+          mirrorConfig: current,
+        });
+      } catch {
+        logger.error(`Could not resolve handle ${handle}.`);
+        continue;
+      }
+    }
+  }
+
+  return profileCache;
 }

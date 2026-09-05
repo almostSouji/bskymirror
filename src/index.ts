@@ -1,47 +1,21 @@
-import { Agent } from "@atproto/api";
-import { DidResolver, HandleResolver } from "@atproto/identity";
 import { Jetstream, websocketTransport } from "@bsky/jetstream";
 import { app } from "@bsky/sdk/lexicons";
 import { REST } from "@discordjs/rest";
 import process from "node:process";
-import { fetchAtProtoRecords, handleCommit, verifyEnv } from "./functions.js";
+import { handleCommit, loadMirrorConfig } from "./functions.js";
 import { logger } from "./logger.js";
 
 const rest = new REST({ version: "10" });
-const agent = new Agent({
-  service: "https://public.api.bsky.app",
-});
-
-const didResolver = new DidResolver({});
-const handleResolver = new HandleResolver({});
-
-const { discordWebhookId, discordWebhookToken, bskyHandles, mentionRoleId } = verifyEnv(
-  process.env,
-  ["DISCORD_WEBHOOK_ID", "DISCORD_WEBHOOK_TOKEN", "BSKY_HANDLES", "MENTION_ROLE_ID"],
-);
-
-const profileCache = new Map<string, Awaited<ReturnType<typeof fetchAtProtoRecords>>>();
-const hookBase = `webhooks/${discordWebhookId}/${discordWebhookToken}`;
-
-for (const handle of bskyHandles) {
-  try {
-    const atProtoData = await fetchAtProtoRecords(handle, {
-      handleResolver,
-      didResolver,
-      agent,
-    });
-
-    profileCache.set(atProtoData.did, atProtoData);
-  } catch {
-    logger.error(`Could not resolve hanlde ${handle}.`);
-  }
-}
-
 const jetstream = new Jetstream("https://jetstream.us-east.bsky.network");
 const controller = new AbortController();
 process.on("SIGINT", () => controller.abort());
 
+logger.info("Loading and hydrating mirror configuration...");
+const profileCache = await loadMirrorConfig("../config.yml");
 const listenDids = Array.from(profileCache.keys()) as `did:${string}:${string}`[];
+
+logger.info(`Loaded mirror configuration for ${profileCache.size} bsky handle(s).`);
+
 try {
   logger.info("Attaching websocket...");
   logger.info({ listenDids }, "Listening...");
@@ -64,21 +38,25 @@ try {
       },
     }),
   })) {
-    const bskyRecord = profileCache.get(evt.did);
-
-    if (!bskyRecord) {
-      logger.error(`Expected to find cached record for ${evt.did} but found none.`);
-      continue;
-    }
-
     if (evt.kind === "commit" && evt.commit.operation === "create") {
       logger.info("Received create commit event");
-      void handleCommit(evt.commit.record, evt.did, evt.commit.rkey, {
-        discordRest: rest,
-        hookBase,
-        record: bskyRecord,
-        mentionRoleId,
-      });
+
+      const profileRecord = profileCache.get(evt.did);
+      if (!profileRecord) {
+        logger.error(`Expected to find cached record for ${evt.did} but found none.`);
+        continue;
+      }
+
+      for (const mirror of profileRecord.mirrorConfig) {
+        const hookBase = `webhooks/${mirror.discord_webhook_id}/${mirror.discord_webhook_token}`;
+
+        void handleCommit(evt.commit.record, evt.did, evt.commit.rkey, {
+          discordRest: rest,
+          hookBase,
+          record: profileRecord.atproto,
+          mentionRoleId: mirror.discord_notification_role_id ?? undefined,
+        });
+      }
     }
   }
 } catch (err) {

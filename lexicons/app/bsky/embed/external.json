@@ -3,9 +3,7 @@
   "defs": {
     "main": {
       "type": "object",
-      "required": [
-        "external"
-      ],
+      "required": ["external"],
       "properties": {
         "external": {
           "ref": "#external",
@@ -16,9 +14,7 @@
     },
     "view": {
       "type": "object",
-      "required": [
-        "external"
-      ],
+      "required": ["external"],
       "properties": {
         "external": {
           "ref": "#viewExternal",
@@ -28,11 +24,7 @@
     },
     "colorRGB": {
       "type": "object",
-      "required": [
-        "r",
-        "g",
-        "b"
-      ],
+      "required": ["r", "g", "b"],
       "properties": {
         "b": {
           "type": "integer",
@@ -54,11 +46,7 @@
     },
     "external": {
       "type": "object",
-      "required": [
-        "uri",
-        "title",
-        "description"
-      ],
+      "required": ["uri", "title", "description"],
       "properties": {
         "uri": {
           "type": "string",
@@ -66,9 +54,7 @@
         },
         "thumb": {
           "type": "blob",
-          "accept": [
-            "image/*"
-          ],
+          "accept": ["image/*"],
           "maxSize": 1000000
         },
         "title": {
@@ -89,11 +75,7 @@
     },
     "viewExternal": {
       "type": "object",
-      "required": [
-        "uri",
-        "title",
-        "description"
-      ],
+      "required": ["uri", "title", "description"],
       "properties": {
         "uri": {
           "type": "string",
@@ -154,10 +136,7 @@
     },
     "viewExternalSource": {
       "type": "object",
-      "required": [
-        "uri",
-        "title"
-      ],
+      "required": ["uri", "title"],
       "properties": {
         "uri": {
           "type": "string",

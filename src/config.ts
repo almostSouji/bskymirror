@@ -1,0 +1,11 @@
+import * as z from "zod";
+
+export const MirrorConfigEntry = z.object({
+  discord_webhook_token: z.string(),
+  discord_webhook_id: z.string(),
+  bsky_handles: z.array(z.string()),
+  discord_notification_role_id: z.string().nullish(),
+  description: z.string().nullish(),
+});
+
+export const MirrorConfig = z.array(MirrorConfigEntry);

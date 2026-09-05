@@ -1,0 +1,14 @@
+- discord_webhook_token: ""
+  discord_webhook_id: ""
+  bsky_handles:
+    - "some_bsky_handle"
+    - "another_bsky_handle"
+  discord_notification_role_id: "optional discord role id"
+  description: "optional description"
+- discord_webhook_token: ""
+  discord_webhook_id: ""
+  bsky_handles:
+    - "some_bsky_handle"
+    - "another_bsky_handle"
+  discord_notification_role_id: "optional discord role id"
+  description: "optional description"

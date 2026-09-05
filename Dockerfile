@@ -10,7 +10,7 @@ RUN npm --global install corepack@latest
 RUN corepack enable
 RUN corepack install
 
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts --force
 RUN pnpm build
 
 CMD pnpm start
