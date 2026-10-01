@@ -50,6 +50,14 @@ try {
       for (const mirror of profileRecord.mirrorConfig) {
         const hookBase = `webhooks/${mirror.discord_webhook_id}/${mirror.discord_webhook_token}`;
 
+        if (evt.commit.record.reply) {
+          logger.debug(evt.commit.record.reply, "Observed commit was a reply.");
+
+          if (!mirror.mirror_replies) {
+            continue;
+          }
+        }
+
         void handleCommit(evt.commit.record, evt.did, evt.commit.rkey, {
           discordRest: rest,
           hookBase,

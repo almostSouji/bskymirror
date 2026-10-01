@@ -12,3 +12,4 @@
     - "another_bsky_handle"
   discord_notification_role_id: "optional discord role id"
   description: "optional description"
+  mirro_replies: true
